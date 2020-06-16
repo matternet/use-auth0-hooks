@@ -1,9 +1,13 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from "react";
 
-import UserContext from '../context/user-context';
-import { IAccessTokenContext } from '../context/access-token-context';
-import { getAccessTokenFromCache, ensureClient } from '../utils/auth0';
-import Auth0Context, { LoginOptions, AccessTokenRequestOptions } from '../context/auth0-context';
+import UserContext from "../context/user-context";
+import { IAccessTokenContext } from "../context/access-token-context";
+import { getAccessTokenFromCache, ensureClient } from "../utils/auth0";
+import Auth0Context, {
+  LoginOptions,
+  LogoutOptions,
+  AccessTokenRequestOptions,
+} from "../context/auth0-context";
 
 export interface UseAuthResult {
   /**
@@ -46,23 +50,15 @@ function initialState(): IAccessTokenContext {
   return {
     accessToken: null,
     error: null,
-    isLoading: false
+    isLoading: false,
   };
 }
 
-export default function useAuth(accessTokenRequest?: AccessTokenRequestOptions): UseAuthResult {
-  const {
-    isAuthenticated,
-    isLoading,
-    error,
-    user
-  } = useContext(UserContext);
-  const {
-    client,
-    login,
-    logout,
-    handlers
-  } = useContext(Auth0Context);
+export default function useAuth(
+  accessTokenRequest?: AccessTokenRequestOptions
+): UseAuthResult {
+  const { isAuthenticated, isLoading, error, user } = useContext(UserContext);
+  const { client, login, logout, handlers } = useContext(Auth0Context);
 
   // If no access token is needed we can just stop here.
   if (!accessTokenRequest) {
@@ -72,17 +68,25 @@ export default function useAuth(accessTokenRequest?: AccessTokenRequestOptions):
       isAuthenticated,
       isLoading,
       login,
-      logout
+      logout,
     };
   }
 
   // The following will holde the additional state for this hook.
   // We'll try to fetch the access token from the cache first if available.
-  const [state, setState] = useState<IAccessTokenContext>((): IAccessTokenContext => ({
-    ...initialState(),
-    accessToken: client && getAccessTokenFromCache(client, accessTokenRequest.audience, accessTokenRequest.scope),
-    isLoading: !!accessTokenRequest
-  }));
+  const [state, setState] = useState<IAccessTokenContext>(
+    (): IAccessTokenContext => ({
+      ...initialState(),
+      accessToken:
+        client &&
+        getAccessTokenFromCache(
+          client,
+          accessTokenRequest.audience,
+          accessTokenRequest.scope
+        ),
+      isLoading: !!accessTokenRequest,
+    })
+  );
 
   useEffect(() => {
     // We are not ready to fetch an access_token yet.
@@ -96,11 +100,15 @@ export default function useAuth(accessTokenRequest?: AccessTokenRequestOptions):
     }
 
     // Try to fetch the access token from the cache in a synchronous way.
-    const cachedAccessToken = getAccessTokenFromCache(client, accessTokenRequest.audience, accessTokenRequest.scope);
+    const cachedAccessToken = getAccessTokenFromCache(
+      client,
+      accessTokenRequest.audience,
+      accessTokenRequest.scope
+    );
     if (cachedAccessToken) {
       setState({
         ...initialState(),
-        accessToken: cachedAccessToken
+        accessToken: cachedAccessToken,
       });
       return;
     }
@@ -110,7 +118,7 @@ export default function useAuth(accessTokenRequest?: AccessTokenRequestOptions):
       try {
         setState({
           ...initialState(),
-          isLoading: true
+          isLoading: true,
         });
 
         // We will fetch the token in a silent way.
@@ -118,8 +126,8 @@ export default function useAuth(accessTokenRequest?: AccessTokenRequestOptions):
           ...initialState(),
           accessToken: await ensureClient(client).getTokenSilently({
             audience: accessTokenRequest.audience,
-            scope: accessTokenRequest.scope
-          })
+            scope: accessTokenRequest.scope,
+          }),
         });
       } catch (e) {
         // An error occured.
@@ -129,7 +137,7 @@ export default function useAuth(accessTokenRequest?: AccessTokenRequestOptions):
 
         setState({
           ...initialState(),
-          error: e
+          error: e,
         });
       }
     };
@@ -143,6 +151,6 @@ export default function useAuth(accessTokenRequest?: AccessTokenRequestOptions):
     isLoading: isLoading || state.isLoading,
     accessToken: state.accessToken,
     login,
-    logout
+    logout,
   };
 }
